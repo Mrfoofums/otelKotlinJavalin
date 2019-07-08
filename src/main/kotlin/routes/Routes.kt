@@ -7,9 +7,6 @@ import io.javalin.http.Context
 
 data class Move (val description: String ="", val type: String = "")
 
-class TraceConfig{
-
-}
 val tracer = initTracer("Kotlin Test")
 
 fun initTracer(service: String): JRETracer {
