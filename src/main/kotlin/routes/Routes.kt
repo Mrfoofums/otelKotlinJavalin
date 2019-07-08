@@ -1,22 +1,40 @@
 package routes
 
+import com.lightstep.tracer.jre.JRETracer
 import io.javalin.Javalin
 import io.javalin.apibuilder.ApiBuilder.get
 import io.javalin.http.Context
 
 data class Move (val description: String ="", val type: String = "")
 
+val tracer = initTracer("Kotlin Test")
+
+fun initTracer(service: String): JRETracer {
+    return JRETracer(
+        com.lightstep.tracer.shared.Options.OptionsBuilder()
+            .withAccessToken("6how6J0/2q4Dqxo6VYi6CKXwQJARSmcvydZYNIpti97UAsyjiCbH1aKTp3VoealzQouMtY0FA0xuwvDQhYJFU87fXMngEWngSxDKCSsI")
+            .withClockSkewCorrection(false)
+            .build()
+    )
+}
 fun createRoutes(){
 
-    val handler = MoveRequestHandler()
+    val handler = MoveRequestHandler(tracer)
     val app = Javalin.create { config ->
         config.defaultContentType = "application/json"
         config.dynamicGzip = true
         config.contextPath = "/api/v1"
     }.routes{
-
        get("/moves/:move"){ctx: Context -> ctx.json(handler.getMoveByName(ctx))}
         get("/moves/"){ctx: Context -> ctx.json(handler.getAllMoves())}
+    }
+
+    app.before { ctx ->
+        val span = tracer.buildSpan("api entered").start()
+        span.setTag("api","entry")
+    }
+
+    app.after{ ctx->
     }
 
     app.error(404) { ctx->
@@ -24,21 +42,25 @@ fun createRoutes(){
     }.start(1991)
 }
 
-class MoveRequestHandler {
-    private val moveDAO = MoveDAO()
+class MoveRequestHandler(val tracer: JRETracer) {
+    private val moveDAO = MoveDAO(tracer)
 
     fun getMoveByName(ctx: Context):Move {
+        val span = tracer.buildSpan("getMoveByName").start()
+        span.setTag("controller","getmovebyname")
         val moveName = ctx.pathParam("move")
+        span.finish()
         return moveDAO.getMoveByName(moveName)
     }
 
     fun getAllMoves(): HashMap<String, Move> {
         return moveDAO.moves
     }
+
 }
 
+class MoveDAO(val tracer: JRETracer) {
 
-class MoveDAO {
      val moves = hashMapOf(
         "windmill" to Move(
             "A classic bboy move where the dancer spins around the crown of their head with their legs out",
@@ -49,6 +71,9 @@ class MoveDAO {
     )
 
     fun getMoveByName(moveName: String): Move {
+        val span = tracer.buildSpan("getMoveByName").start()
+        span.setTag("dao","getmovebyname")
+        span.finish()
         return moves.getValue(moveName)
     }
 }

@@ -20,11 +20,12 @@ dependencies {
 
     compile group: 'io.javalin', name: 'javalin', version: '3.0.0'
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.9'
-    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
 
     //tracing stuff
-    compile 'io.opentracing:opentracing-api:0.33.0'
-    compile 'com.lightstep.tracer:lightstep-tracer-java:0.16.3'
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+    compile 'com.lightstep.tracer:lightstep-tracer-jre:0.14.6'
+    compile 'com.lightstep.tracer:tracer-okhttp:0.17.2'
+
 }
 
 compileKotlin {
