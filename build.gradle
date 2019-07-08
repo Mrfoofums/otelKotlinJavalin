@@ -12,6 +12,7 @@ version '1'
 
 repositories {
     mavenCentral()
+    jcenter()
 }
 
 dependencies {
@@ -25,6 +26,7 @@ dependencies {
     compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
     compile 'com.lightstep.tracer:lightstep-tracer-jre:0.14.6'
     compile 'com.lightstep.tracer:tracer-okhttp:0.17.2'
+    
 
 }
 

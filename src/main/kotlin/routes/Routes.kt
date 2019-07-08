@@ -7,6 +7,9 @@ import io.javalin.http.Context
 
 data class Move (val description: String ="", val type: String = "")
 
+class TraceConfig{
+
+}
 val tracer = initTracer("Kotlin Test")
 
 fun initTracer(service: String): JRETracer {
@@ -43,13 +46,13 @@ fun createRoutes(){
 }
 
 class MoveRequestHandler(val tracer: JRETracer) {
+
     private val moveDAO = MoveDAO(tracer)
 
     fun getMoveByName(ctx: Context):Move {
-        val span = tracer.buildSpan("getMoveByName").start()
+        val span = tracer.buildSpan("getMoveByNameHANDLER").start()
         span.setTag("controller","getmovebyname")
         val moveName = ctx.pathParam("move")
-        span.finish()
         return moveDAO.getMoveByName(moveName)
     }
 
@@ -71,7 +74,7 @@ class MoveDAO(val tracer: JRETracer) {
     )
 
     fun getMoveByName(moveName: String): Move {
-        val span = tracer.buildSpan("getMoveByName").start()
+        val span = tracer.buildSpan("getMoveByNameDAO").start()
         span.setTag("dao","getmovebyname")
         span.finish()
         return moves.getValue(moveName)
