@@ -53,6 +53,7 @@ class MoveRequestHandler(val tracer: JRETracer) {
         val span = tracer.buildSpan("getMoveByNameHANDLER").start()
         span.setTag("controller","getmovebyname")
         val moveName = ctx.pathParam("move")
+        span.finish();
         return moveDAO.getMoveByName(moveName)
     }
 
