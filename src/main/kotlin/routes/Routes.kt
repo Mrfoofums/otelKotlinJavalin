@@ -41,7 +41,6 @@ fun createRoutes(){
     }
 
     app.error(404) { ctx->
-//        ctx.result("YOU DONE GOOFED, 404 DUDE!!!")
         ctx.json("404, route doesn't exist. Try http://localhost:1991/api/v1/moves")
     }.start(1991)
 }
