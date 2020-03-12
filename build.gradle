@@ -24,9 +24,15 @@ dependencies {
 
     //tracing stuff
     compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
-    compile 'com.lightstep.tracer:lightstep-tracer-jre:0.14.6'
-    compile 'com.lightstep.tracer:tracer-okhttp:0.17.2'
-    
+
+    compile "io.opentelemetry:opentelemetry-api:0.2.0"
+    compile "io.opentelemetry:opentelemetry-sdk:0.2.0"
+    compile "io.opentelemetry:opentelemetry-exporters-logging:0.2.0"
+    compile "io.opentelemetry:opentelemetry-exporters-jaeger:0.2.0"
+    compile "io.grpc:grpc-protobuf:1.27.2"
+    compile "io.grpc:grpc-netty:1.27.2"
+
+    compile "com.squareup.okhttp3:okhttp:4.4.0"
 
 }
 

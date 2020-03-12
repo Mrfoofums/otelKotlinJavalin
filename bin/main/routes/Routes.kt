@@ -1,17 +1,21 @@
 package routes
 
+import com.lightstep.tracer.jre.JRETracer
 import io.javalin.Javalin
 import io.javalin.apibuilder.ApiBuilder.get
 import io.javalin.http.Context
-import io.opentelemetry.sdk.OpenTelemetrySdk
-import io.opentelemetry.trace.Tracer
 
 data class Move (val description: String ="", val type: String = "")
 
 val tracer = getTracer("Kotlin Test")
 
-fun getTracer(service: String): Tracer {
-    return OpenTelemetrySdk.getTracerFactory().get("KotlinTracer")
+fun getTracer(service: String): JRETracer {
+    return JRETracer(
+        com.lightstep.tracer.shared.Options.OptionsBuilder()
+            .withAccessToken("6how6J0/2q4Dqxo6VYi6CKXwQJARSmcvydZYNIpti97UAsyjiCbH1aKTp3VoealzQouMtY0FA0xuwvDQhYJFU87fXMngEWngSxDKCSsI")
+            .withClockSkewCorrection(false)
+            .build()
+    )
 }
 fun createRoutes(){
 
@@ -27,13 +31,13 @@ fun createRoutes(){
     }
 
     app.before { ctx ->
-        //Extract Context here
+        val span = tracer.buildSpan("api entered").start()
+        tracer.scopeManager().activate(span)
+        span.setTag("api","entry")
     }
 
     app.after{ ctx->
-//        tracer.activeSpan().finish()
-
-        //Close our span and inject context
+        tracer.activeSpan().finish()
     }
 
     app.error(404) { ctx->
@@ -41,24 +45,29 @@ fun createRoutes(){
     }.start(1991)
 }
 
-class MoveRequestHandler(tracer: Tracer) {
+class MoveRequestHandler(tracer: JRETracer) {
 
     private val moveDAO = MoveDAO(tracer)
 
     fun getMoveByName(ctx: Context):Move {
+        val span = tracer.buildSpan("getMoveByNameHANDLER").start()
+        span.setTag("controller","getmovebyname")
 
+        tracer.scopeManager().activate(span)
         val moveName = ctx.pathParam("move")
         return moveDAO.getMoveByName(moveName)
     }
 
     fun getAllMoves(): HashMap<String, Move> {
-
+        val span = tracer.buildSpan("getAllMovesHandler").start()
+        span.setTag("controller","getallmoves")
+        tracer.scopeManager().activate(span)
         return moveDAO.moves
     }
 
 }
 
-class MoveDAO (tracer: Tracer)  {
+class MoveDAO (tracer: JRETracer)  {
 
      val moves = hashMapOf(
         "windmill" to Move(
@@ -70,7 +79,9 @@ class MoveDAO (tracer: Tracer)  {
     )
 
     fun getMoveByName(moveName: String): Move {
-
+        val span = tracer.buildSpan("getMoveByNameDAO").start()
+        span.setTag("dao","getmovebyname")
+        tracer.scopeManager().activate(span)
         return moves.getValue(moveName)
     }
 }
