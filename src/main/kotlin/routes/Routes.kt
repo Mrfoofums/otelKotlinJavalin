@@ -5,7 +5,7 @@ import io.javalin.Javalin
 import io.javalin.apibuilder.ApiBuilder.get
 import io.javalin.http.Context
 import io.opentelemetry.exporters.jaeger.JaegerGrpcSpanExporter
-import io.opentelemetry.exporters.logging.LoggingExporter
+import io.opentelemetry.exporters.logging.LoggingSpanExporter
 import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor
@@ -17,10 +17,9 @@ import kotlin.collections.HashMap
 data class Move (val description: String ="", val type: String = "")
 
 val tracer = getTracer("Kotlin Test")
-val spanMap =  mutableMapOf<String, Span>()
 
 fun getTracer(service: String): Tracer {
-    val tracer = OpenTelemetrySdk.getTracerFactory().get("KotlinTracer")
+    val tracer = OpenTelemetrySdk.getTracerProvider().get("Kotlin Example")
     val jaegerProcessor: SpanProcessor = SimpleSpansProcessor.newBuilder(
         JaegerGrpcSpanExporter.newBuilder()
             .setServiceName(service)
@@ -32,17 +31,17 @@ fun getTracer(service: String): Tracer {
             .build()
     ).build()
 
-    val logProcessor: SpanProcessor = SimpleSpansProcessor.newBuilder(LoggingExporter()).build()
+    val logProcessor: SpanProcessor = SimpleSpansProcessor.newBuilder(LoggingSpanExporter()).build()
 
-    OpenTelemetrySdk.getTracerFactory().addSpanProcessor(logProcessor)
-    OpenTelemetrySdk.getTracerFactory().addSpanProcessor(jaegerProcessor)
+    OpenTelemetrySdk.getTracerProvider().addSpanProcessor(logProcessor)
+    OpenTelemetrySdk.getTracerProvider().addSpanProcessor(jaegerProcessor)
 
     return tracer
 }
 
 fun createRoutes(){
 
-
+    var beforeSpan: Span = tracer.currentSpan // Should be nothing when we bootstrap our application
     val handler = MoveRequestHandler()
 
     val app = Javalin.create { config ->
@@ -51,14 +50,8 @@ fun createRoutes(){
         config.contextPath = "/api/v1"
     }.routes{
        get("/moves/:move"){ctx: Context ->
-           val span = tracer.spanBuilder("beforeSpan").startSpan()
-           tracer.withSpan(span)
-           try {
-               ctx.json(handler.getMoveByName(ctx,span))
-           }
-           finally {
-               span.end()
-           }
+               ctx.json(handler.getMoveByName(ctx))
+
        }
         get("/moves/"){ctx: Context ->
 
@@ -73,15 +66,15 @@ fun createRoutes(){
     }
 
     app.before { ctx ->
-//        tracer.spanBuilder(ctx.fullUrl()).startSpan().also {
-//            it.setAttribute("context","before")
-//        }
+       beforeSpan = tracer.spanBuilder(ctx.fullUrl()).startSpan().also {
+            it.setAttribute("context","before")
+           tracer.withSpan(it)
+        }
 
     }
 
     app.after{
-//        spanMap["beforeSpan"]?.end()
-//        spanMap.clear()
+        beforeSpan.end()
     }
 
     app.error(404) { ctx->
@@ -93,30 +86,26 @@ class MoveRequestHandler{
 
     private val moveDAO = MoveDAO()
 
-    fun getMoveByName(ctx: Context, parentSpant: Span):Move {
+    fun getMoveByName(ctx: Context):Move {
         val moveName = ctx.pathParam("move")
 
-        tracer.spanBuilder("getMoveByNameSpanHandler").setParent(parentSpant).startSpan().also {
+        tracer.spanBuilder("getMoveByNameSpanHandler").setParent(tracer.currentSpan).startSpan().also {
+            tracer.withSpan(it)
             it.setAttribute("move", moveName)
-            try {
-                return moveDAO.getMoveByName(moveName, it)
-            }
-            finally {
-                it.end()
-            }
+            it.end()
+
+            return moveDAO.getMoveByName(moveName)
         }
 
     }
 
     fun getAllMoves(parentSpan: Span): HashMap<String, Move> {
         tracer.spanBuilder("getAllMovesSpan").setParent(parentSpan).startSpan().also {
+            tracer.withSpan(it)
             it.setAttribute("move", "allMoves")
-            try {
-                return  moveDAO.moves
-            }
-            finally {
-                it.end()
-            }
+            it.end()
+
+            return  moveDAO.moves
         }
 
     }
@@ -134,16 +123,14 @@ class MoveDAO   {
         "toprock" to Move("The Top Rock is all movement where the breaker is still standing. Set's are typically started with top rock.", "Rocking")
     )
 
-    fun getMoveByName(moveName: String, parentSpan: Span): Move {
+    fun getMoveByName(moveName: String): Move {
         println("ParnetSpan ID passed into GetMoveByNameSpan id: ${tracer.currentSpan.context.spanId}")
-        tracer.spanBuilder("getMoveByNameDAOSpan").setParent(parentSpan).startSpan().also {
+        tracer.spanBuilder("getMoveByNameDAOSpan").setParent(tracer.currentSpan).startSpan().also {
             it.setAttribute("move", moveName)
-            try{
-                return moves.getValue(moveName)
-            }
-            finally {
-                it.end()
-            }
+            it.end()
+
+            return moves.getValue(moveName)
+
         }
     }
 }
